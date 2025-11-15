@@ -323,6 +323,16 @@ sudo kill -9 <PID>
 docker system prune -a --volumes -f
 
 
+cd /var/www/betting
+
+# Option 1: Undo and re-seed everything
+docker-compose exec api npm run db:seed:undo
+docker-compose exec api npm run db:seed
+
+# Option 2: Use setup command (migrates + seeds)
+docker-compose exec api npm run setup:docker
+
+
 
 **Happy Coding! 🎉**
 
