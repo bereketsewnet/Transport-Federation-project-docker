@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: betting_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rynobet_betting_db}
+      MYSQL_USER: ${MYSQL_USER:-bettingadminuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-~HNiBgmo56wag~y3}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - betting_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # Adminer - Database GUI
+  adminer:
+    image: adminer:latest
+    container_name: betting_adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    networks:
+      - betting_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+
+  # Backend API
+  api:
+    build:
+      context: ./betting_transaction_api
+      dockerfile: Dockerfile
+    container_name: betting_api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    env_file:
+      - ./betting_transaction_api/.env
+    volumes:
+      - api_uploads:/app/uploads
+    networks:
+      - betting_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # Entrypoint script handles migrations
+
+  # Frontend UI
+  frontend:
+    build:
+      context: ./betting_transaction_ui
+      dockerfile: Dockerfile
+    container_name: betting_frontend
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    env_file:
+      - ./betting_transaction_ui/.env
+    networks:
+      - betting_network
+    depends_on:
+      - api
+
+  # Telegram Bot
+  bot:
+    build:
+      context: ./betting_transaction_bot
+      dockerfile: Dockerfile
+    container_name: betting_bot
+    restart: unless-stopped
+    env_file:
+      - ./betting_transaction_bot/.env
+    volumes:
+      - bot_data:/app/data
+    networks:
+      - betting_network
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
+    driver: local
+  api_uploads:
+    driver: local
+  bot_data:
+    driver: local
+
+networks:
+  betting_network:
+    driver: bridge
+
