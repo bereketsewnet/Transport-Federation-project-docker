@@ -133,6 +133,9 @@ docker-compose exec api npm run migrate
 # Run seeds
 docker-compose exec api npm run db:seed
 
+# undo seeds
+docker-compose exec api npm run migrate:undo
+
 # Access API container shell
 docker-compose exec api sh
 
